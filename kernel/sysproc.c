@@ -1,12 +1,14 @@
 #include "types.h"
-#include "riscv.h"
-#include "defs.h"
-#include "date.h"
 #include "param.h"
 #include "memlayout.h"
 #include "spinlock.h"
+#include "riscv.h"
+#include "defs.h"
 #include "proc.h"
+#include "sysinfo.h"
 
+extern uint64 getunusedproc();
+extern uint64 getkmemfree();
 uint64
 sys_exit(void)
 {
@@ -94,4 +96,29 @@ sys_uptime(void)
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+
+uint64
+sys_trace(void)
+{
+  int n;
+  if(argint(0,&n)<0)
+    return -1;
+  myproc()->trace_mask=n;
+  return 0;
+}
+
+uint64
+sys_sysinfo(void)
+{
+  struct sysinfo info;
+  info.freemem=getkmemfree();
+  info.nproc=getunusedproc();
+
+  uint64 addr;
+  if(argaddr(0,&addr)<0)
+    return -1;
+  if(copyout(myproc()->pagetable,addr,(char*)&info,sizeof(info))<0)    
+    return -1;
+  return 0;
 }

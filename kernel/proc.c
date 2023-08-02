@@ -43,7 +43,16 @@ procinit(void)
   }
   kvminithart();
 }
-
+uint64 getunusedproc()
+{
+  uint64 num_p=0;
+  for(int i=0;i< NPROC;i++)
+  {
+    if(proc[i].state==UNUSED)
+      num_p++;
+  }
+  return NPROC-num_p;
+}
 // Must be called with interrupts disabled,
 // to prevent race with process being moved
 // to a different CPU.
@@ -274,7 +283,7 @@ fork(void)
     return -1;
   }
   np->sz = p->sz;
-
+  np->trace_mask = p->trace_mask;
   np->parent = p;
 
   // copy saved user registers.
@@ -294,7 +303,7 @@ fork(void)
   pid = np->pid;
 
   np->state = RUNNABLE;
-
+  
   release(&np->lock);
 
   return pid;
