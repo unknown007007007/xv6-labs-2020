@@ -5,10 +5,8 @@
 //
 // qemu ... -drive file=fs.img,if=none,format=raw,id=x0 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
 //
-
 #include "types.h"
 #include "riscv.h"
-#include "defs.h"
 #include "param.h"
 #include "memlayout.h"
 #include "spinlock.h"
@@ -16,6 +14,8 @@
 #include "fs.h"
 #include "buf.h"
 #include "virtio.h"
+#include "defs.h"
+#include "proc.h"
 
 // the address of virtio mmio register r.
 #define R(r) ((volatile uint32 *)(VIRTIO0 + (r)))
@@ -171,7 +171,7 @@ virtio_disk_rw(struct buf *b, int write)
   uint64 sector = b->blockno * (BSIZE / 512);
 
   acquire(&disk.vdisk_lock);
-
+ 
   // the spec says that legacy block operations use three
   // descriptors: one for type/reserved/sector, one for
   // the data, one for a 1-byte status result.
@@ -203,7 +203,7 @@ virtio_disk_rw(struct buf *b, int write)
 
   // buf0 is on a kernel stack, which is not direct mapped,
   // thus the call to kvmpa().
-  disk.desc[idx[0]].addr = (uint64) kvmpa((uint64) &buf0);
+  disk.desc[idx[0]].addr = (uint64) kvmpa(myproc()->kernelpgtbl, (uint64) &buf0);
   disk.desc[idx[0]].len = sizeof(buf0);
   disk.desc[idx[0]].flags = VRING_DESC_F_NEXT;
   disk.desc[idx[0]].next = idx[1];
