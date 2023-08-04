@@ -38,19 +38,6 @@ sys_wait(void)
   return wait(p);
 }
 
-uint64
-sys_sbrk(void)
-{
-  int addr;
-  int n;
-
-  if(argint(0, &n) < 0)
-    return -1;
-  addr = myproc()->sz;
-  if(growproc(n) < 0)
-    return -1;
-  return addr;
-}
 
 uint64
 sys_sleep(void)
@@ -94,4 +81,21 @@ sys_uptime(void)
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+
+// kernel/sysproc.c
+uint64
+sys_sbrk(void)
+{
+  int addr;
+  int n;
+  struct proc *p = myproc();
+  if(argint(0, &n) < 0)
+    return -1;
+  addr = p->sz;
+  if(n < 0) {
+    uvmdealloc(p->pagetable, p->sz, p->sz+n); // 如果是缩小空间，则马上释放
+  }
+  p->sz += n; // 懒分配
+  return addr;
 }
